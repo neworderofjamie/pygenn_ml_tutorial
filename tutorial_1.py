@@ -97,7 +97,8 @@ current_input.vars["magnitude"].view[:] = testing_images[0] * INPUT_CURRENT_SCAL
 # Upload
 model.push_var_to_device("current_input", "magnitude")
 
-layer_spikes = [None] * len(neuron_layers)
+# Simulate
+layer_spikes = [(np.empty(0), np.empty(0)) for _ in enumerate(neuron_layers)]
 while model.timestep < PRESENT_TIMESTEPS:
     # Advance simulation
     model.step_time()
@@ -109,11 +110,8 @@ while model.timestep < PRESENT_TIMESTEPS:
 
         # Add to data structure
         spike_times = np.ones_like(l.current_spikes) * model.t
-        if layer_spikes[i] is None:
-            layer_spikes[i] = (np.copy(l.current_spikes), spike_times)
-        else:
-            layer_spikes[i] = (np.hstack((layer_spikes[i][0], l.current_spikes)),
-                               np.hstack((layer_spikes[i][1], spike_times)))
+        layer_spikes[i] = (np.hstack((layer_spikes[i][0], l.current_spikes)),
+                           np.hstack((layer_spikes[i][1], spike_times)))
 
 # ----------------------------------------------------------------------------
 # Plotting
