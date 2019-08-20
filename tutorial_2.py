@@ -39,7 +39,7 @@ cs_model = create_custom_current_source_class(
 # Build model
 # ----------------------------------------------------------------------------
 # Create GeNN model
-model = GeNNModel("float", "spiking_eval")
+model = GeNNModel("float", "tutorial_2")
 model.dT = TIMESTEP
 
 # Load weights
@@ -90,60 +90,7 @@ testing_labels = np.load("testing_labels.npy")
 # Check dimensions match network
 assert testing_images.shape[1] == weights[0].shape[0]
 assert np.max(testing_labels) == (weights[1].shape[1] - 1)
-'''
-# Set current input by scaling first image
-current_input.vars["magnitude"].view[:] = testing_images[0] * INPUT_CURRENT_SCALE
 
-# Upload
-model.push_var_to_device("current_input", "magnitude")
-
-layer_spikes = [None] * len(neuron_layers)
-while model.timestep < PRESENT_TIMESTEPS:
-    # Advance simulation
-    model.step_time()
-
-    # Loop through neuron layers
-    for i, l in enumerate(neuron_layers):
-        # Download spikes
-        model.pull_current_spikes_from_device(l.name)
-
-        # Add to data structure
-        spike_times = np.ones_like(l.current_spikes) * model.t
-        if layer_spikes[i] is None:
-            layer_spikes[i] = (np.copy(l.current_spikes), spike_times)
-        else:
-            layer_spikes[i] = (np.hstack((layer_spikes[i][0], l.current_spikes)),
-                               np.hstack((layer_spikes[i][1], spike_times)))
-
-# ----------------------------------------------------------------------------
-# Plotting
-# ----------------------------------------------------------------------------
-import matplotlib.pyplot as plt
-
-# Create a plot with axes for each
-fig, axes = plt.subplots(len(neuron_layers), sharex=True)
-
-
-# Loop through axes and their corresponding neuron populations
-for a, s, l in zip(axes, layer_spikes, neuron_layers):
-    # Plot spikes
-    a.scatter(s[1], s[0], s=1)
-
-    # Set title, axis labels
-    a.set_title(l.name)
-    a.set_ylabel("Spike number")
-    a.set_xlim((0, PRESENT_TIMESTEPS * TIMESTEP))
-    a.set_ylim((0, l.size))
-
-
-# Add an x-axis label and translucent line showing the correct label
-axes[-1].set_xlabel("Time [ms]")
-axes[-1].hlines(testing_labels[0], xmin=0, xmax=PRESENT_TIMESTEPS,
-                linestyle="--", color="gray", alpha=0.2)
-
-# Show plot
-plt.show()
-'''
 # Get views to efficiently access state variables
 current_input_magnitude = current_input.vars["magnitude"].view
 output_spike_count = neuron_layers[-1].vars["SpikeCount"].view
