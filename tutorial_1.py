@@ -95,10 +95,10 @@ assert np.max(testing_labels) == (weights[1].shape[1] - 1)
 current_input.vars["magnitude"].view[:] = testing_images[0] * INPUT_CURRENT_SCALE
 
 # Upload
-model.push_var_to_device("current_input", "magnitude")
+current_input.push_var_to_device("magnitude")
 
 # Simulate
-layer_spikes = [(np.empty(0), np.empty(0)) for _ in enumerate(neuron_layers)]
+layer_spikes = [[] for i, _ in enumerate(neuron_layers)]
 while model.timestep < PRESENT_TIMESTEPS:
     # Advance simulation
     model.step_time()
@@ -106,12 +106,10 @@ while model.timestep < PRESENT_TIMESTEPS:
     # Loop through neuron layers
     for i, l in enumerate(neuron_layers):
         # Download spikes
-        model.pull_current_spikes_from_device(l.name)
+        l.pull_current_spikes_from_device()
 
         # Add to data structure
-        spike_times = np.ones_like(l.current_spikes) * model.t
-        layer_spikes[i] = (np.hstack((layer_spikes[i][0], l.current_spikes)),
-                           np.hstack((layer_spikes[i][1], spike_times)))
+        layer_spikes[i].append(np.copy(l.current_spikes))
 
 # ----------------------------------------------------------------------------
 # Plotting
@@ -121,17 +119,20 @@ import matplotlib.pyplot as plt
 # Create a plot with axes for each
 fig, axes = plt.subplots(len(neuron_layers), sharex=True)
 
-
 # Loop through axes and their corresponding neuron populations
-for a, s, l in zip(axes, layer_spikes, neuron_layers):
+for ax, spk, lyr in zip(axes, layer_spikes, neuron_layers):
+    spike_ids = np.concatenate(spk)
+    spike_times = np.concatenate([np.ones_like(s) * i * TIMESTEP 
+                                  for i, s in enumerate(spk)])
+
     # Plot spikes
-    a.scatter(s[1], s[0], s=1)
+    ax.scatter(spike_times, spike_ids, s=1)
 
     # Set title, axis labels
-    a.set_title(l.name)
-    a.set_ylabel("Spike number")
-    a.set_xlim((0, PRESENT_TIMESTEPS * TIMESTEP))
-    a.set_ylim((0, l.size))
+    ax.set_title(lyr.name)
+    ax.set_ylabel("Spike number")
+    ax.set_xlim((0, PRESENT_TIMESTEPS * TIMESTEP))
+    ax.set_ylim((0, l.size))
 
 
 # Add an x-axis label and translucent line showing the correct label
