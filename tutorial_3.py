@@ -1,5 +1,6 @@
 import numpy as np
 from os import path
+from time import perf_counter
 
 from pygenn.genn_model import (create_custom_neuron_class,
                                create_custom_current_source_class,
@@ -80,10 +81,7 @@ current_input = model.add_current_source("current_input", cs_model,
 
 # Build and load our model
 model.build()
-
-assert False
 model.load()
-
 
 # ----------------------------------------------------------------------------
 # Simulate
@@ -96,12 +94,17 @@ testing_labels = np.load("testing_labels.npy")
 assert testing_images.shape[1] == weights[0].shape[0]
 assert np.max(testing_labels) == (weights[1].shape[1] - 1)
 
+# Reshape to match batches
+testing_images = np.reshape(testing_images, (-1, BATCH_SIZE, weights[0].shape[0]))
+testing_labels = np.reshape(testing_labels, (-1, BATCH_SIZE))
+
 # Get views to efficiently access state variables
 current_input_magnitude = current_input.vars["magnitude"].view
 output_spike_count = neuron_layers[-1].vars["SpikeCount"].view
 layer_voltages = [l.vars["V"].view for l in neuron_layers]
 
 # Simulate
+start_time = perf_counter()
 num_correct = 0
 while model.timestep < (PRESENT_TIMESTEPS * testing_images.shape[0]):
     # Calculate the timestep within the presentation
@@ -134,14 +137,11 @@ while model.timestep < (PRESENT_TIMESTEPS * testing_images.shape[0]):
         neuron_layers[-1].pull_var_from_device("SpikeCount")
 
         # Find which neuron spiked the most to get prediction
-        predicted_label = np.argmax(output_spike_count)
+        predicted_label = np.argmax(output_spike_count, axis=1)
         true_label = testing_labels[example]
 
-        print("\tExample=%u, true label=%u, predicted label=%u" % (example,
-                                                                   true_label,
-                                                                   predicted_label))
+        num_correct += np.sum(predicted_label == true_label)
 
-        if predicted_label == true_label:
-            num_correct += 1
-
-print("Accuracy %f%%" % ((num_correct / float(testing_images.shape[0])) * 100.0))
+end_time = perf_counter()
+print("Accuracy %f%%" % ((num_correct / float(testing_images.shape[0] * BATCH_SIZE)) * 100.0))
+print("Time %f seconds" % (end_time - start_time))

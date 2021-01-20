@@ -1,5 +1,6 @@
 import numpy as np
 from os import path
+from time import perf_counter
 
 from pygenn.genn_model import (create_custom_neuron_class,
                                create_custom_current_source_class,
@@ -98,6 +99,7 @@ layer_voltages = [l.vars["V"].view for l in neuron_layers]
 
 # Simulate
 num_correct = 0
+start_time = perf_counter()
 while model.timestep < (PRESENT_TIMESTEPS * testing_images.shape[0]):
     # Calculate the timestep within the presentation
     timestep_in_example = model.timestep % PRESENT_TIMESTEPS
@@ -132,11 +134,9 @@ while model.timestep < (PRESENT_TIMESTEPS * testing_images.shape[0]):
         predicted_label = np.argmax(output_spike_count)
         true_label = testing_labels[example]
 
-        print("\tExample=%u, true label=%u, predicted label=%u" % (example,
-                                                                   true_label,
-                                                                   predicted_label))
-
         if predicted_label == true_label:
             num_correct += 1
 
+end_time = perf_counter()
 print("Accuracy %f%%" % ((num_correct / float(testing_images.shape[0])) * 100.0))
+print("Time %f seconds" % (end_time - start_time))
