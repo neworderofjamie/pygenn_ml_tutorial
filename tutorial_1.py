@@ -132,7 +132,7 @@ for ax, spk, lyr in zip(axes, layer_spikes, neuron_layers):
     ax.set_title(lyr.name)
     ax.set_ylabel("Spike number")
     ax.set_xlim((0, PRESENT_TIMESTEPS * TIMESTEP))
-    ax.set_ylim((0, l.size))
+    ax.set_ylim((0, lyr.size))
 
 
 # Add an x-axis label and translucent line showing the correct label
